@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Compartir Ubicación Segura</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+        button {
+            padding: 12px 25px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 8px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+        }
+        #mensaje_estado {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ubicación Segura</h1>
+    <button onclick="obtenerUbicacion()">Compartir mi Ubicación 📍</button>
+    <p id="mensaje_estado">Esperando acción...</p>
+
+    <script>
+        function obtenerUbicacion() {
+            const mensaje = document.getElementById('mensaje_estado');
+            mensaje.innerText = "Solicitando permiso... Pulsa 'Permitir'.";
+
+            if (!navigator.geolocation) {
+                mensaje.innerText = "Tu navegador no soporta geolocalización.";
+                return;
+            }
+
+            navigator.geolocation.getCurrentPosition(
+                enviarUbicacion,
+                manejarError,
+                {
+                    enableHighAccuracy: true,
+                    timeout: 7000,
+                    maximumAge: 0
+                }
+            );
+        }
+
+        function enviarUbicacion(position) {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+
+            const mensaje = document.getElementById('mensaje_estado');
+            mensaje.innerHTML = `📍 Ubicación obtenida:<br>Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}<br>Enviando datos...`;
+
+            fetch('guardar_ubicacion.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lat, lon })
+            })
+            .then(res => res.json())
+            .then(data => {
+                mensaje.innerHTML =
+                    `✅ Ubicación enviada correctamente.<br>
+                     📌 Lat: ${lat.toFixed(6)} | Lon: ${lon.toFixed(6)}<br>
+                     📨 Respuesta del servidor: ${data.message}`;
+            })
+            .catch(err => {
+                mensaje.innerHTML = "❌ Error al enviar datos al servidor.";
+                console.error(err);
+            });
+        }
+
+        function manejarError(error) {
+            let mensaje = "❌ Error desconocido.";
+
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    mensaje = "❌ Acceso denegado: Debes pulsar 'Permitir'.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    mensaje = "📡 Señal GPS no disponible.";
+                    break;
+                case error.TIMEOUT:
+                    mensaje = "⌛ Tiempo agotado: No se pudo obtener la ubicación.";
+                    break;
+            }
+
+            document.getElementById('mensaje_estado').innerText = mensaje;
+        }
+    </script>
+</body>
+</html>
